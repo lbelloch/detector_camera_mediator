@@ -7,6 +7,32 @@ import rospy
 from sensor_msgs.msg import Image
 
 
+class ActiveModelDiscovery:
+    """Expose active model input topics from the status interface."""
+
+    def __init__(self):
+        """Start idle until the status message schema is available."""
+        self.status_topic = rospy.get_param("~model_status_topic", "")
+        self.status_type = rospy.get_param("~model_status_type", "")
+        self._active_input_topics = ()
+
+        if self.status_topic and self.status_type:
+            rospy.logwarn(
+                "Model status parsing is not implemented; no model destinations will be used"
+            )
+        else:
+            rospy.loginfo("Model status interface is unset; running without model destinations")
+
+    def active_input_topics(self):
+        """Return topics extracted from the latest model status message."""
+        return self._active_input_topics
+
+    def update_from_status(self, status_message):
+        """Update destinations from status once its message schema is defined."""
+        # TODO: Extract active models' image input topics from the status message.
+        self._active_input_topics = ()
+
+
 class DetectorCameraMediator:
     """Subscribe to configured camera topics and queue incoming frames."""
 
@@ -22,6 +48,7 @@ class DetectorCameraMediator:
         self._queues = {
             topic: deque() for topic in self.camera_topics
         }
+        self.model_discovery = ActiveModelDiscovery()
         self._condition = threading.Condition()
         self._next_camera_index = 0
         self._subscribers = [
