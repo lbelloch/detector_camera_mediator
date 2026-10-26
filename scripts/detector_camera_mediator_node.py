@@ -49,6 +49,7 @@ class DetectorCameraMediator:
             topic: deque() for topic in self.camera_topics
         }
         self.model_discovery = ActiveModelDiscovery()
+        self._model_publishers = {}
         self._condition = threading.Condition()
         self._next_camera_index = 0
         self._subscribers = [
@@ -96,13 +97,26 @@ class DetectorCameraMediator:
 
         return None
 
+    def _publish_frame(self, frame):
+        """Publish one frame to each active model input topic."""
+        input_topics = tuple(dict.fromkeys(
+            self.model_discovery.active_input_topics()
+        ))
+        for topic in input_topics:
+            publisher = self._model_publishers.get(topic)
+            if publisher is None:
+                publisher = rospy.Publisher(topic, Image, queue_size=1)
+                self._model_publishers[topic] = publisher
+            publisher.publish(frame)
+
     def run(self):
         """Drain queued frames until ROS shuts down."""
         while not rospy.is_shutdown():
             next_frame = self._next_frame()
             if next_frame is not None:
-                topic, _frame = next_frame
-                rospy.logdebug("Received frame from %s", topic)
+                topic, frame = next_frame
+                self._publish_frame(frame)
+                rospy.logdebug("Processed frame from %s", topic)
 
 
 def main():
