@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>detector_camera_mediator</name>
+  <version>0.1.0</version>
+  <description>ROS 1 package for mediating detector and camera data.</description>
+
+  <maintainer email="lbelloch@robotnik.es">Luis Belloch</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>rospy</exec_depend>
+
+  <export>
+  </export>
+</package>

@@ -1,0 +1,9 @@
+# Camera topics are processed in the order listed.
+camera_topics: []
+
+# Maximum number of pending frames to retain per camera; oldest frames are dropped first.
+frame_queue_size: 2
+
+# TODO: Set these when the active-model status interface is defined.
+model_status_topic: ""
+model_status_type: ""
