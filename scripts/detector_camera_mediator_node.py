@@ -4,6 +4,7 @@ from collections import deque
 import threading
 
 import rospy
+from robotnik_msgs.msg import State
 from sensor_msgs.msg import Image
 
 
@@ -11,26 +12,60 @@ class ActiveModelDiscovery:
     """Expose active model input topics from the status interface."""
 
     def __init__(self):
-        """Start idle until the status message schema is available."""
-        self.status_topic = rospy.get_param("~model_status_topic", "")
-        self.status_type = rospy.get_param("~model_status_type", "")
+        """Subscribe to each model state topic and track READY models."""
+        status_topics = rospy.get_param("~model_status_interfaces", [])
+        if not isinstance(status_topics, list):
+            raise ValueError("~model_status_interfaces must be a list")
+        if any(not isinstance(topic, str) or not topic for topic in status_topics):
+            raise ValueError("~model_status_interfaces entries must be topic strings")
+
+        self.status_topics = tuple(dict.fromkeys(status_topics))
+        self._active_model_topics = set()
+        self._lock = threading.Lock()
+        self._subscribers = [
+            rospy.Subscriber(
+                topic,
+                State,
+                self._make_status_callback(topic),
+                queue_size=1,
+            )
+            for topic in self.status_topics
+        ]
         self._active_input_topics = ()
 
-        if self.status_topic and self.status_type:
+        if self.status_topics:
             rospy.logwarn(
-                "Model status parsing is not implemented; no model destinations will be used"
+                "Tracking READY model states; image input topics are not configured"
             )
         else:
-            rospy.loginfo("Model status interface is unset; running without model destinations")
+            rospy.loginfo("No model state topics configured")
+
+    def _make_status_callback(self, status_topic):
+        """Return a callback that updates activity for one model."""
+        def update(status_message):
+            self.update_from_status(status_topic, status_message)
+
+        return update
 
     def active_input_topics(self):
-        """Return topics extracted from the latest model status message."""
+        """Return configured image destinations for active models."""
         return self._active_input_topics
 
-    def update_from_status(self, status_message):
-        """Update destinations from status once its message schema is defined."""
-        # TODO: Extract active models' image input topics from the status message.
-        self._active_input_topics = ()
+    def active_model_topics(self):
+        """Return state topics whose models are currently READY."""
+        with self._lock:
+            return tuple(
+                topic for topic in self.status_topics
+                if topic in self._active_model_topics
+            )
+
+    def update_from_status(self, status_topic, status_message):
+        """Mark a model active only while its state is READY_STATE."""
+        with self._lock:
+            if status_message.state == State.READY_STATE:
+                self._active_model_topics.add(status_topic)
+            else:
+                self._active_model_topics.discard(status_topic)
 
 
 class DetectorCameraMediator:

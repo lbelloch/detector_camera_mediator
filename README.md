@@ -14,9 +14,11 @@ camera_topics:
   - /camera/image_raw
 ```
 
-Set `frame_queue_size` as needed. The model status topic and message type are
-placeholders; model discovery is not implemented yet, so frames are not
-forwarded to models until that interface is defined.
+Set `frame_queue_size` as needed. `model_status_interfaces` is a list of
+`robotnik_msgs/State` topics, one per model. A model is considered active only
+when its state is `READY_STATE` (300). The state message does not provide an
+image input topic, so model activity is tracked but frames are not yet
+forwarded to model inputs.
 
 ## Build and run
 

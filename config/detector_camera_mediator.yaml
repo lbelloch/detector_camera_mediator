@@ -1,9 +1,16 @@
 # Camera topics are processed in the order listed.
-camera_topics: []
+camera_topics: [
+  "/robot/front_rgbd_camera/color/image_raw",
+  "/robot/top_ptz_camera/color/image_raw",
+  "/robot/top_ptz_camera/thermal/image_raw"
+]
 
 # Maximum number of pending frames to retain per camera; oldest frames are dropped first.
 frame_queue_size: 2
 
-# TODO: Set these when the active-model status interface is defined.
-model_status_topic: ""
-model_status_type: ""
+# Model state topics; only models reporting READY_STATE are considered active.
+model_status_interfaces: [
+  "/robot/detectors/person_detector/state",
+  "/robot/detectors/broken_fence_detector/state",
+  "/robot/detectors/vehicle_detector/state"
+]
