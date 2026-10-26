@@ -105,9 +105,10 @@ class DetectorCameraMediator:
         for topic in input_topics:
             publisher = self._model_publishers.get(topic)
             if publisher is None:
-                publisher = rospy.Publisher(topic, Image, queue_size=1)
-                self._model_publishers[topic] = publisher
+                rospy.logdebug("No publisher for topic %s", topic)
+                return False
             publisher.publish(frame)
+        return True
 
     def run(self):
         """Drain queued frames until ROS shuts down."""
