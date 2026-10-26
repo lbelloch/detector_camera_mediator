@@ -3,7 +3,7 @@
         type="detector_camera_mediator_node.py"
         name="detector_camera_mediator"
         output="screen">
-          <rosparam command="load"
+    <rosparam command="load"
               file="$(find detector_camera_mediator)/config/detector_camera_mediator.yaml" />
-        </node>
+  </node>
 </launch>
