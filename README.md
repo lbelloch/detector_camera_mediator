@@ -2,8 +2,8 @@
 
 ROS 1 node that subscribes to configured `sensor_msgs/Image` camera topics,
 queues frames per camera, and processes them round-robin. Old queued frames are
-dropped when a camera queue is full. Frames are published to active model input
-topics when available.
+dropped when a camera queue is full. When at least one configured model is
+READY, frames are published on the single configured `output_topic`.
 
 ## Configure
 
@@ -14,11 +14,10 @@ camera_topics:
   - /camera/image_raw
 ```
 
-Set `frame_queue_size` as needed. `model_status_interfaces` is a list of
-`robotnik_msgs/State` topics, one per model. A model is considered active only
-when its state is `READY_STATE` (300). The state message does not provide an
-image input topic, so model activity is tracked but frames are not yet
-forwarded to model inputs.
+Set `frame_queue_size` and `output_topic` as needed.
+`model_status_interfaces` is a list of `robotnik_msgs/State` topics, one per
+model. Frames are forwarded while at least one listed model reports
+`READY_STATE` (300); individual model input topics are not required.
 
 ## Build and run
 

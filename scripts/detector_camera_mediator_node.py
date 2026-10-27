@@ -31,11 +31,10 @@ class ActiveModelDiscovery:
             )
             for topic in self.status_topics
         ]
-        self._active_input_topics = ()
 
         if self.status_topics:
             rospy.logwarn(
-                "Tracking READY model states; image input topics are not configured"
+                "Tracking READY model states; frames forward when any model is active"
             )
         else:
             rospy.loginfo("No model state topics configured")
@@ -47,17 +46,10 @@ class ActiveModelDiscovery:
 
         return update
 
-    def active_input_topics(self):
-        """Return configured image destinations for active models."""
-        return self._active_input_topics
-
-    def active_model_topics(self):
-        """Return state topics whose models are currently READY."""
+    def has_active_models(self):
+        """Return whether at least one tracked model is currently READY."""
         with self._lock:
-            return tuple(
-                topic for topic in self.status_topics
-                if topic in self._active_model_topics
-            )
+            return bool(self._active_model_topics)
 
     def update_from_status(self, status_topic, status_message):
         """Mark a model active only while its state is READY_STATE."""
@@ -76,6 +68,9 @@ class DetectorCameraMediator:
         camera_topics = rospy.get_param("~camera_topics", [])
         self.camera_topics = list(dict.fromkeys(camera_topics))
         self.queue_size = int(rospy.get_param("~frame_queue_size", 2))
+        self.output_topic = rospy.get_param(
+            "~output_topic", "/robot/detectors/image_raw"
+        )
 
         if self.queue_size < 1:
             raise ValueError("~frame_queue_size must be at least 1")
@@ -84,7 +79,9 @@ class DetectorCameraMediator:
             topic: deque() for topic in self.camera_topics
         }
         self.model_discovery = ActiveModelDiscovery()
-        self._model_publishers = {}
+        self._image_publisher = rospy.Publisher(
+            self.output_topic, Image, queue_size=1
+        )
         self._condition = threading.Condition()
         self._next_camera_index = 0
         self._subscribers = [
@@ -133,16 +130,10 @@ class DetectorCameraMediator:
         return None
 
     def _publish_frame(self, frame):
-        """Publish one frame to each active model input topic."""
-        input_topics = tuple(dict.fromkeys(
-            self.model_discovery.active_input_topics()
-        ))
-        for topic in input_topics:
-            publisher = self._model_publishers.get(topic)
-            if publisher is None:
-                rospy.logdebug("No publisher for topic %s", topic)
-                return False
-            publisher.publish(frame)
+        """Publish one frame when at least one model is active."""
+        if not self.model_discovery.has_active_models():
+            return False
+        self._image_publisher.publish(frame)
         return True
 
     def run(self):

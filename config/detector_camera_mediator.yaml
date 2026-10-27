@@ -8,9 +8,14 @@ camera_topics: [
 # Maximum number of pending frames to retain per camera; oldest frames are dropped first.
 frame_queue_size: 2
 
+# Shared image input for all detectors.
+output_topic: "/robot/detectors/image_raw"
+
 # Model state topics; only models reporting READY_STATE are considered active.
 model_status_interfaces: [
   "/robot/detectors/person_detector/state",
   "/robot/detectors/broken_fence_detector/state",
-  "/robot/detectors/vehicle_detector/state"
+  "/robot/detectors/vehicle_detector/state",
+  "/robot/detectors/multiclass_detector/state",
+  "/robot/detectors/fire_detector/state"
 ]
