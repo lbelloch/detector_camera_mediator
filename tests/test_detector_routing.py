@@ -20,18 +20,24 @@ def load_mediator_module():
     sensor_msgs = types.ModuleType("sensor_msgs")
     sensor_msgs_msg = types.ModuleType("sensor_msgs.msg")
     sensor_msgs_msg.Image = type("Image", (), {})
-    sys.modules.update({
+    object_detection_msgs = types.ModuleType("object_detection_msgs")
+    object_detection_msgs_msg = types.ModuleType("object_detection_msgs.msg")
+    object_detection_msgs_msg.CameraFrame = types.SimpleNamespace
+    modules = {
         "rospy": rospy,
         "robotnik_msgs": robotnik_msgs,
         "robotnik_msgs.msg": robotnik_msgs_msg,
         "sensor_msgs": sensor_msgs,
         "sensor_msgs.msg": sensor_msgs_msg,
-    })
+        "object_detection_msgs": object_detection_msgs,
+        "object_detection_msgs.msg": object_detection_msgs_msg,
+    }
 
     script_path = Path(__file__).parents[1] / "scripts" / "detector_camera_mediator_node.py"
     spec = importlib.util.spec_from_file_location("mediator_under_test", script_path)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    with patch.dict(sys.modules, modules):
+        spec.loader.exec_module(module)
     return module, State
 
 
@@ -73,6 +79,22 @@ class DetectorRoutingTests(unittest.TestCase):
         discovery.update_from_status("first", types.SimpleNamespace(state=0))
 
         self.assertEqual(discovery.ready_detectors(), ())
+
+    def test_run_tags_frame_with_resolved_camera_topic(self):
+        mediator = self.mediator_module.DetectorCameraMediator.__new__(
+            self.mediator_module.DetectorCameraMediator)
+        image = types.SimpleNamespace(header=types.SimpleNamespace(stamp=42, frame_id="shared"))
+        published = []
+        mediator._next_frame = lambda: ("camera/image_raw", image)
+        mediator._publish_frame = published.append
+        with patch.object(self.mediator_module.rospy, "is_shutdown", side_effect=[False, True], create=True), \
+                patch.object(self.mediator_module.rospy, "resolve_name", return_value="/robot/camera/image_raw", create=True), \
+                patch.object(self.mediator_module.rospy, "logdebug", create=True):
+            mediator.run()
+        self.assertEqual(published[0].camera_topic, "/robot/camera/image_raw")
+        self.assertIs(published[0].image, image)
+        self.assertEqual(image.header.stamp, 42)
+        self.assertEqual(image.header.frame_id, "shared")
 
 
 if __name__ == "__main__":

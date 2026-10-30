@@ -4,6 +4,8 @@ ROS 1 node that subscribes to configured `sensor_msgs/Image` camera topics,
 queues frames per camera, and processes them round-robin. Old queued frames are
 dropped when a camera queue is full. Each frame is published to every configured
 detector whose state is READY; each detector has its own image input topic.
+Detector inputs use `object_detection_msgs/CameraFrame`: the resolved camera
+topic identifies the source independently of the unchanged image header.
 
 ## Configure
 

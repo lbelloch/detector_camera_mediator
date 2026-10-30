@@ -5,6 +5,7 @@ import threading
 import time
 
 import rospy
+from object_detection_msgs.msg import CameraFrame
 from robotnik_msgs.msg import State
 from sensor_msgs.msg import Image
 
@@ -98,7 +99,7 @@ class DetectorCameraMediator:
         )
         self._image_publishers = {
             detector["name"]: rospy.Publisher(
-                detector["image_topic"], Image, queue_size=1
+                detector["image_topic"], CameraFrame, queue_size=1
             )
             for detector in detector_registry
         }
@@ -162,7 +163,8 @@ class DetectorCameraMediator:
             next_frame = self._next_frame()
             if next_frame is not None:
                 topic, frame = next_frame
-                self._publish_frame(frame)
+                self._publish_frame(CameraFrame(
+                    camera_topic=rospy.resolve_name(topic), image=frame))
                 rospy.logdebug("Processed frame from %s", topic)
 
 
